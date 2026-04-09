@@ -338,8 +338,16 @@ export default function BattlePlayPage() {
   const roomIdRaw = typeof params?.roomId === "string" ? params.roomId : "";
   const startAtParam = searchParams.get("startAt");
   const endAtParam = searchParams.get("endAt");
+  const difficultyParam = searchParams.get("difficulty");
+  const timeLimitParam = searchParams.get("timeLimit");
   const parsedStartAt = startAtParam ? Number(startAtParam) : NaN;
   const parsedEndAt = endAtParam ? Number(endAtParam) : NaN;
+  const parsedTimeLimit = timeLimitParam ? Number(timeLimitParam) : NaN;
+  const roomDifficulty =
+    difficultyParam === "easy" || difficultyParam === "medium" || difficultyParam === "hard"
+      ? difficultyParam
+      : null;
+  const roomTimeLimitSec = [30, 45, 60, 120].includes(parsedTimeLimit) ? parsedTimeLimit : null;
   const serverStartAtMs =
     Number.isFinite(parsedStartAt) && parsedStartAt > 0 ? parsedStartAt : null;
   const serverEndAtMs =
@@ -355,6 +363,7 @@ export default function BattlePlayPage() {
 
   const socketRef = useRef<Socket | null>(null);
   const didNavigateToResultRef = useRef(false);
+  const didRequestFinalizeRef = useRef(false);
   const [opponentWpm, setOpponentWpm] = useState(0);
   const [opponentProgress, setOpponentProgress] = useState(0);
 
@@ -413,7 +422,14 @@ export default function BattlePlayPage() {
     socketRef.current = socket;
 
     socket.on("connect", () => {
-      socket.emit("join_room", { roomId: roomIdRaw });
+      if (roomDifficulty && roomTimeLimitSec) {
+        socket.emit("join_room", {
+          roomId: roomIdRaw,
+          settings: { difficulty: roomDifficulty, timeLimitSec: roomTimeLimitSec },
+        });
+      } else {
+        socket.emit("join_room", { roomId: roomIdRaw });
+      }
       socket.emit("get_room_state", roomIdRaw);
     });
 
@@ -472,38 +488,58 @@ export default function BattlePlayPage() {
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [roomIdRaw, router]);
+  }, [roomIdRaw, router, roomDifficulty, roomTimeLimitSec]);
 
-  // Fallback: if timer reaches zero but game_over event is delayed/missed, still open result page.
+  // When timer hits zero, ask backend to finalize so winner is always server-authoritative.
   useEffect(() => {
     if (!gameStarted) return;
     if (secondsLeft > 0) return;
-    if (didNavigateToResultRef.current) return;
+    if (didNavigateToResultRef.current || didRequestFinalizeRef.current) return;
 
-    const socketId = socketRef.current?.id ?? "local";
-    const myStats: PlayerFinalStats = {
-      correctChars: liveTotalCorrectChars,
-      mistakes: liveMistakes,
-      totalTypedChars: liveTotalTypedChars,
-      accuracy: liveAccuracy,
-      wpm: youWpm,
-      progress: youProgress,
-    };
+    didRequestFinalizeRef.current = true;
+    setIsGameOver(true);
 
+    const socket = socketRef.current;
+    if (socket?.connected) {
+      // Push one final progress snapshot before forcing finalize.
+      socket.emit("progress-update", {
+        roomId: roomIdRaw,
+        stats: {
+          correctChars: liveTotalCorrectChars,
+          mistakes: liveMistakes,
+          totalTypedChars: liveTotalTypedChars,
+          accuracy: liveAccuracy,
+          wpm: youWpm,
+          progress: youProgress,
+        },
+      });
+      socket.emit("finalize-game", { roomId: roomIdRaw });
+      return;
+    }
+
+    // Last-resort offline fallback: navigate without forcing local winner.
     if (typeof window !== "undefined" && roomIdRaw) {
+      const socketId = socket?.id ?? "local";
       window.sessionStorage.setItem(
         `battle_result_${roomIdRaw}`,
         JSON.stringify({
-          player1: { id: socketId, stats: myStats },
+          player1: {
+            id: socketId,
+            stats: {
+              correctChars: liveTotalCorrectChars,
+              mistakes: liveMistakes,
+              totalTypedChars: liveTotalTypedChars,
+              accuracy: liveAccuracy,
+              wpm: youWpm,
+              progress: youProgress,
+            },
+          },
           player2: null,
-          winnerId: socketId,
-          youWin: true,
+          winnerId: null,
           mySocketId: socketId,
         }),
       );
     }
-
-    setIsGameOver(true);
     didNavigateToResultRef.current = true;
     router.push(`/battle/result/${roomIdRaw}`);
   }, [

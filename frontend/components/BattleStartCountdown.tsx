@@ -62,10 +62,20 @@ type BattleStartCountdownProps = {
   active: boolean;
   startAtMs?: number | null;
   endAtMs?: number | null;
+  difficulty?: "easy" | "medium" | "hard" | null;
+  timeLimitSec?: 30 | 45 | 60 | 120 | null;
   onFinished?: () => void;
 };
 
-export default function BattleStartCountdown({ roomId, active, startAtMs, endAtMs, onFinished }: BattleStartCountdownProps) {
+export default function BattleStartCountdown({
+  roomId,
+  active,
+  startAtMs,
+  endAtMs,
+  difficulty,
+  timeLimitSec,
+  onFinished,
+}: BattleStartCountdownProps) {
   const router = useRouter();
   const [step, setStep] = useState<Step | null>(null);
 
@@ -86,6 +96,12 @@ export default function BattleStartCountdown({ roomId, active, startAtMs, endAtM
         const query = new URLSearchParams();
         if (typeof startAtMs === "number" && Number.isFinite(startAtMs)) query.set("startAt", String(startAtMs));
         if (typeof endAtMs === "number" && Number.isFinite(endAtMs)) query.set("endAt", String(endAtMs));
+        if (difficulty === "easy" || difficulty === "medium" || difficulty === "hard") {
+          query.set("difficulty", difficulty);
+        }
+        if (typeof timeLimitSec === "number" && [30, 45, 60, 120].includes(timeLimitSec)) {
+          query.set("timeLimit", String(timeLimitSec));
+        }
         const href = query.toString() ? `${base}?${query.toString()}` : base;
         router.push(href);
         onFinished?.();
@@ -98,7 +114,7 @@ export default function BattleStartCountdown({ roomId, active, startAtMs, endAtM
     }, stepDuration(step));
 
     return () => window.clearTimeout(t);
-  }, [active, step, roomId, router, onFinished, startAtMs, endAtMs]);
+  }, [active, step, roomId, router, onFinished, startAtMs, endAtMs, difficulty, timeLimitSec]);
 
   if (!active || !step) return null;
 

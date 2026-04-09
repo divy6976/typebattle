@@ -188,7 +188,13 @@ function parseJoinPayload(payload) {
   const timeLimitSec = ALLOWED_TIME_LIMITS.includes(rawTimeLimit) ? rawTimeLimit : null;
   return {
     roomId,
-    settings: difficulty && timeLimitSec ? { difficulty, timeLimitSec } : null,
+    settings:
+      difficulty || timeLimitSec
+        ? {
+            difficulty: difficulty ?? "medium",
+            timeLimitSec: timeLimitSec ?? DEFAULT_TIME_LIMIT_SEC,
+          }
+        : null,
   };
 }
 
@@ -603,6 +609,12 @@ io.on("connection", (socket) => {
     // Do not overwrite player.paragraph — the client may still be on an earlier prefetched
     // paragraph; only request-new-paragraph updates the authoritative current paragraph.
     socket.emit("paragraph-batch", { paragraphs });
+  });
+
+  socket.on("finalize-game", (payload) => {
+    const roomId = payload?.roomId;
+    if (!roomId || typeof roomId !== "string") return;
+    emitGameOver(roomId);
   });
 
   // Backwards-compat: old event name used by earlier client builds

@@ -3,15 +3,17 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { io, type Socket } from "socket.io-client";
+import { getApiBaseUrl } from "../lib/apiBase";
 import BattleStartCountdown from "./BattleStartCountdown";
 import EnergyBorderCard from "./EnergyBorderCard";
 import PlayerCard from "./PlayCard";
 import ReadyButton from "./ReadyButton";
 
-const SOCKET_URL = "http://localhost:5000";
+const SOCKET_URL = getApiBaseUrl();
 
 type ServerPlayer = { id: string; ready: boolean };
 type Difficulty = "easy" | "medium" | "hard";
+type TimeLimitSec = 30 | 45 | 60 | 120;
 
 function HourglassIcon({ className }: { className?: string }) {
   return (
@@ -58,7 +60,9 @@ export default function WaitingSection({ compact = false }: WaitingSectionProps)
       difficultyParam === "easy" || difficultyParam === "medium" || difficultyParam === "hard"
         ? difficultyParam
         : null;
-    const timeLimitSec = [30, 45, 60].includes(timeLimitParam) ? timeLimitParam : null;
+    const timeLimitSec: TimeLimitSec | null = [30, 45, 60, 120].includes(timeLimitParam)
+      ? (timeLimitParam as TimeLimitSec)
+      : null;
     return difficulty && timeLimitSec ? { difficulty, timeLimitSec } : null;
   }, [difficultyParam, timeLimitParam]);
   const [connected, setConnected] = useState(false);
@@ -134,7 +138,14 @@ export default function WaitingSection({ compact = false }: WaitingSectionProps)
 
   return (
     <div className="animate-waiting-section-in mx-auto w-full max-w-[960px]">
-      <BattleStartCountdown roomId={roomId} active={battleStartActive} startAtMs={gameStartAtMs} endAtMs={gameEndAtMs} />
+      <BattleStartCountdown
+        roomId={roomId}
+        active={battleStartActive}
+        startAtMs={gameStartAtMs}
+        endAtMs={gameEndAtMs}
+        difficulty={roomSettings?.difficulty ?? null}
+        timeLimitSec={roomSettings?.timeLimitSec ?? null}
+      />
 
       <EnergyBorderCard
         className="w-full"
