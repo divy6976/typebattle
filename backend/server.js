@@ -549,6 +549,7 @@ io.on("connection", (socket) => {
       io.to(roomId).emit("start_game", {
         startAtMs,
         endAtMs,
+        difficulty: room?.settings?.difficulty ?? "medium",
         timeLimitSec: room?.settings?.timeLimitSec ?? DEFAULT_TIME_LIMIT_SEC,
       });
     }

@@ -71,6 +71,8 @@ export default function WaitingSection({ compact = false }: WaitingSectionProps)
   const [battleStartActive, setBattleStartActive] = useState(false);
   const [gameStartAtMs, setGameStartAtMs] = useState<number | null>(null);
   const [gameEndAtMs, setGameEndAtMs] = useState<number | null>(null);
+  const [gameDifficulty, setGameDifficulty] = useState<Difficulty | null>(roomSettings?.difficulty ?? null);
+  const [gameTimeLimitSec, setGameTimeLimitSec] = useState<TimeLimitSec | null>(roomSettings?.timeLimitSec ?? null);
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
@@ -93,7 +95,7 @@ export default function WaitingSection({ compact = false }: WaitingSectionProps)
       setMySocketId(socket.id ?? null);
     });
 
-    socket.on("start_game", (payload: { startAtMs?: number; endAtMs?: number }) => {
+    socket.on("start_game", (payload: { startAtMs?: number; endAtMs?: number; difficulty?: Difficulty; timeLimitSec?: TimeLimitSec }) => {
       console.log("Game Starting");
       if (typeof payload?.startAtMs === "number" && Number.isFinite(payload.startAtMs)) {
         setGameStartAtMs(payload.startAtMs);
@@ -104,6 +106,16 @@ export default function WaitingSection({ compact = false }: WaitingSectionProps)
         setGameEndAtMs(payload.endAtMs);
       } else {
         setGameEndAtMs(null);
+      }
+      if (payload?.difficulty === "easy" || payload?.difficulty === "medium" || payload?.difficulty === "hard") {
+        setGameDifficulty(payload.difficulty);
+      } else {
+        setGameDifficulty(roomSettings?.difficulty ?? "medium");
+      }
+      if (typeof payload?.timeLimitSec === "number" && [30, 45, 60, 120].includes(payload.timeLimitSec)) {
+        setGameTimeLimitSec(payload.timeLimitSec as TimeLimitSec);
+      } else {
+        setGameTimeLimitSec(roomSettings?.timeLimitSec ?? 60);
       }
       setBattleStartActive(true);
     });
@@ -143,8 +155,8 @@ export default function WaitingSection({ compact = false }: WaitingSectionProps)
         active={battleStartActive}
         startAtMs={gameStartAtMs}
         endAtMs={gameEndAtMs}
-        difficulty={roomSettings?.difficulty ?? null}
-        timeLimitSec={roomSettings?.timeLimitSec ?? null}
+        difficulty={gameDifficulty}
+        timeLimitSec={gameTimeLimitSec}
       />
 
       <EnergyBorderCard
