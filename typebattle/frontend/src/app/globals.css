@@ -1,0 +1,579 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-inter);
+  --font-display: var(--font-inter);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-inter), Arial, Helvetica, sans-serif;
+}
+
+@keyframes floatSoft {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.28;
+  }
+  50% {
+    transform: translate3d(0, -8px, 0) scale(1.08);
+    opacity: 0.52;
+  }
+}
+
+@keyframes driftSoft {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(7px, -5px, 0);
+  }
+}
+
+@keyframes roomFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Avoid arbitrary Tailwind `animate-[...ease-out...]` — hyphens break JSX/SWC in some setups */
+.animate-waiting-section-in {
+  animation: roomFadeIn 0.75s ease-out 0.08s both;
+}
+
+.animate-waiting-stagger-a {
+  animation: roomFadeIn 0.7s ease-out 0.15s both;
+}
+
+.animate-waiting-stagger-b {
+  animation: roomFadeIn 0.7s ease-out 0.22s both;
+}
+
+@keyframes codeShimmer {
+  0% {
+    background-position: 200% center;
+  }
+  100% {
+    background-position: -200% center;
+  }
+}
+
+@keyframes avatarFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes ringGlowYou {
+  0%,
+  100% {
+    box-shadow:
+      0 0 20px rgba(250, 204, 21, 0.45),
+      0 0 40px rgba(250, 204, 21, 0.2),
+      inset 0 0 12px rgba(250, 204, 21, 0.08);
+  }
+  50% {
+    box-shadow:
+      0 0 28px rgba(250, 204, 21, 0.65),
+      0 0 56px rgba(250, 204, 21, 0.28),
+      inset 0 0 16px rgba(250, 204, 21, 0.12);
+  }
+}
+
+@keyframes ringGlowOpp {
+  0%,
+  100% {
+    box-shadow:
+      0 0 18px rgba(167, 139, 250, 0.35),
+      0 0 36px rgba(139, 92, 246, 0.15),
+      inset 0 0 10px rgba(139, 92, 246, 0.06);
+  }
+  50% {
+    box-shadow:
+      0 0 26px rgba(167, 139, 250, 0.5),
+      0 0 48px rgba(139, 92, 246, 0.22),
+      inset 0 0 14px rgba(139, 92, 246, 0.1);
+  }
+}
+
+@keyframes statusDotPulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.15);
+    opacity: 0.85;
+  }
+}
+
+@keyframes floatParticle {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+    opacity: 0.35;
+  }
+  50% {
+    transform: translate3d(0, -20px, 0);
+    opacity: 0.7;
+  }
+}
+
+.animate-avatar-float {
+  animation: avatarFloat 5s ease-in-out infinite;
+}
+
+.animate-ring-you {
+  animation: ringGlowYou 2.6s ease-in-out infinite;
+}
+
+.animate-ring-opp {
+  animation: ringGlowOpp 2.8s ease-in-out infinite;
+}
+
+.animate-status-dot {
+  animation: statusDotPulse 1.6s ease-in-out infinite;
+}
+
+/* --- Room header: premium lobby FX --- */
+
+@keyframes keyboardFloat {
+  0%,
+  100% {
+    transform: translateY(-10px) rotate(-5deg);
+  }
+  50% {
+    transform: translateY(10px) rotate(5deg);
+  }
+}
+
+@keyframes keyboardFloatReverse {
+  0%,
+  100% {
+    transform: translateY(10px) rotate(5deg);
+  }
+  50% {
+    transform: translateY(-10px) rotate(-5deg);
+  }
+}
+
+@keyframes roomCodePulse {
+  0%,
+  100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 20px rgba(250, 204, 21, 0.45)) drop-shadow(0 0 50px rgba(251, 146, 60, 0.2));
+  }
+  50% {
+    transform: scale(1.025);
+    filter: drop-shadow(0 0 28px rgba(250, 204, 21, 0.65)) drop-shadow(0 0 64px rgba(251, 146, 60, 0.35));
+  }
+}
+
+@keyframes headerParticleDrift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+    opacity: 0.25;
+  }
+  33% {
+    transform: translate3d(6px, -14px, 0);
+    opacity: 0.85;
+  }
+  66% {
+    transform: translate3d(-8px, 8px, 0);
+    opacity: 0.45;
+  }
+}
+
+@keyframes headerParticleDriftSlow {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+    opacity: 0.2;
+  }
+  50% {
+    transform: translate3d(-12px, -18px, 0);
+    opacity: 0.75;
+  }
+}
+
+@keyframes lightningFlicker {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  12% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+  18% {
+    opacity: 0.35;
+    transform: scale(0.95);
+  }
+  28% {
+    opacity: 0.95;
+    transform: scale(1.02);
+  }
+  35%,
+  55% {
+    opacity: 0;
+    transform: scale(0.88);
+  }
+  62% {
+    opacity: 0.8;
+    transform: scale(1.06);
+  }
+  70% {
+    opacity: 0.15;
+  }
+}
+
+@keyframes lightningFlickerAlt {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  22% {
+    opacity: 0.9;
+    transform: scale(1.1);
+  }
+  31% {
+    opacity: 0;
+  }
+  48% {
+    opacity: 0.75;
+    transform: scale(1);
+  }
+  58%,
+  88% {
+    opacity: 0;
+  }
+}
+
+@keyframes copyRipple {
+  from {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0.45;
+  }
+  to {
+    transform: translate(-50%, -50%) scale(2.8);
+    opacity: 0;
+  }
+}
+
+.room-code-lobby {
+  background-size: 220% auto;
+  animation:
+    codeShimmer 5s linear infinite,
+    roomCodePulse 4s ease-in-out infinite;
+}
+
+/* Rotating conic-gradient “energy” border */
+@keyframes energyBorderSpin {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+.energy-border-gradient {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 175%;
+  min-width: 175%;
+  aspect-ratio: 1;
+  background: conic-gradient(
+    from 0deg,
+    #fde047,
+    #facc15,
+    #fb923c,
+    #c084fc,
+    #a855f7,
+    rgba(168, 85, 247, 0.12),
+    rgba(250, 204, 21, 0.2),
+    #fde047
+  );
+  filter: blur(0.75px);
+  animation: energyBorderSpin 3.2s linear infinite;
+  will-change: transform;
+}
+
+/* --- Battle start: cinematic countdown overlay --- */
+
+@keyframes battleCountdownTick {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+    filter: blur(10px);
+  }
+  18% {
+    transform: scale(1.2);
+    opacity: 1;
+    filter: blur(0);
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  72% {
+    transform: scale(1.04);
+    opacity: 0.92;
+  }
+  100% {
+    transform: scale(1.12);
+    opacity: 0;
+    filter: blur(2px);
+  }
+}
+
+@keyframes battleIntroIn {
+  0% {
+    transform: scale(0.85) translateY(12px);
+    opacity: 0;
+  }
+  55% {
+    transform: scale(1.02) translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes battlePulseGlow {
+  0%,
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.55;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.12);
+    opacity: 0.95;
+  }
+}
+
+@keyframes battleScreenShake {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  10% {
+    transform: translate3d(-6px, 3px, 0) scale(1.02);
+  }
+  22% {
+    transform: translate3d(5px, -4px, 0) scale(1.03);
+  }
+  35% {
+    transform: translate3d(-4px, -3px, 0) scale(1.02);
+  }
+  48% {
+    transform: translate3d(4px, 5px, 0) scale(1.04);
+  }
+  62% {
+    transform: translate3d(-3px, 2px, 0) scale(1.02);
+  }
+  78% {
+    transform: translate3d(2px, -2px, 0) scale(1.01);
+  }
+}
+
+@keyframes battleGoZoom {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  45% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes battleLightningFlash {
+  0% {
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  22% {
+    opacity: 0.15;
+  }
+  35% {
+    opacity: 0.85;
+  }
+  55% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes battleParticleBurst {
+  0% {
+    transform: translate(-50%, -50%) rotate(var(--burst-angle, 0deg)) translateY(0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) rotate(var(--burst-angle, 0deg)) translateY(calc(-1 * var(--burst-dist, 140px)))
+      scale(0.2);
+    opacity: 0;
+  }
+}
+
+.battle-countdown-tick {
+  animation: battleCountdownTick 1s cubic-bezier(0.34, 1.45, 0.64, 1) forwards;
+}
+
+.animate-battle-intro {
+  animation: battleIntroIn 1.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-battle-pulse-glow {
+  animation: battlePulseGlow 1.8s ease-in-out infinite;
+}
+
+.animate-battle-screen-shake {
+  animation: battleScreenShake 0.65s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+.animate-battle-go-zoom {
+  animation: battleGoZoom 0.85s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.animate-battle-lightning-flash {
+  animation: battleLightningFlash 0.55s ease-out both;
+}
+
+.animate-battle-particle-burst {
+  left: 50%;
+  top: 50%;
+  animation: battleParticleBurst 0.75s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+.battle-countdown-gradient {
+  background-image: linear-gradient(135deg, #fef08a 0%, #facc15 35%, #fb923c 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+.battle-countdown-gradient-alt {
+  background-image: linear-gradient(135deg, #fde047 0%, #c084fc 50%, #a855f7 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+.battle-countdown-gradient-go {
+  background-image: linear-gradient(100deg, #fef08a 0%, #facc15 30%, #fb923c 55%, #a855f7 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+.battle-countdown-glow {
+  filter: drop-shadow(0 0 28px rgba(250, 204, 21, 0.65)) drop-shadow(0 0 60px rgba(251, 146, 60, 0.35));
+  text-shadow:
+    0 0 40px rgba(250, 204, 21, 0.5),
+    0 0 80px rgba(251, 146, 60, 0.25);
+}
+
+.battle-countdown-glow-strong {
+  filter: drop-shadow(0 0 36px rgba(250, 204, 21, 0.85)) drop-shadow(0 0 72px rgba(168, 85, 247, 0.45));
+  text-shadow:
+    0 0 50px rgba(250, 204, 21, 0.6),
+    0 0 100px rgba(167, 139, 250, 0.35);
+}
+
+/* Typing battle: caret + particles */
+
+@keyframes battleCaret {
+  0%,
+  40% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.animate-battle-caret {
+  animation: battleCaret 0.9s steps(2, start) infinite;
+}
+
+@keyframes battleBackgroundParticles {
+  0% {
+    opacity: 0.2;
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    opacity: 0.45;
+    transform: translate3d(0, -10px, 0);
+  }
+  100% {
+    opacity: 0.2;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.animate-battle-particles::before,
+.animate-battle-particles::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  background-image:
+    radial-gradient(circle at 10% 20%, rgba(250, 204, 21, 0.55) 0, transparent 55%),
+    radial-gradient(circle at 80% 30%, rgba(168, 85, 247, 0.6) 0, transparent 55%),
+    radial-gradient(circle at 40% 80%, rgba(56, 189, 248, 0.4) 0, transparent 55%);
+  background-size: 220% 220%;
+  mix-blend-mode: screen;
+  opacity: 0.35;
+  pointer-events: none;
+  animation: battleBackgroundParticles 16s ease-in-out infinite alternate;
+}
+
+.animate-battle-particles::after {
+  filter: blur(10px);
+  opacity: 0.3;
+  animation-duration: 22s;
+}
