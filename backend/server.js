@@ -172,6 +172,7 @@ const START_COUNTDOWN_MS = 6700;
 const DEFAULT_TIME_LIMIT_SEC = 60;
 const ALLOWED_TIME_LIMITS = [30, 45, 60, 120];
 const ALLOWED_DIFFICULTIES = ["easy", "medium", "hard"];
+const PARAGRAPH_BANK_SIZE = 3;
 
 function parseJoinPayload(payload) {
   const normalizeRoomId = (value) =>
@@ -336,6 +337,37 @@ function getInitialParagraphForNewPlayer(room) {
   return getNextParagraphForRoom(room);
 }
 
+function getNextParagraphForPlayer(room, socketId) {
+  if (!room || !socketId) return generateParagraph("medium");
+  const difficulty = room?.settings?.difficulty ?? "medium";
+  if (!room.playerParagraphHistory) {
+    room.playerParagraphHistory = {};
+  }
+  if (!Array.isArray(room.playerParagraphHistory[socketId])) {
+    room.playerParagraphHistory[socketId] = [];
+  }
+
+  const history = room.playerParagraphHistory[socketId];
+  if (history.length >= PARAGRAPH_BANK_SIZE) {
+    history.length = 0;
+  }
+
+  let next = generateParagraph(difficulty);
+  let guard = 0;
+  while (history.includes(next) && guard < 100) {
+    next = generateParagraph(difficulty);
+    guard += 1;
+  }
+
+  if (guard >= 100) {
+    history.length = 0;
+    next = generateParagraph(difficulty);
+  }
+
+  history.push(next);
+  return next;
+}
+
 function makeEmptyPlayerStats() {
   return {
     correctChars: 0,
@@ -435,6 +467,7 @@ io.on("connection", (socket) => {
         settings,
         players: [],
         currentParagraph: generateParagraph(settings.difficulty),
+        playerParagraphHistory: {},
         progress: {},
         finalStats: {},
         game: {
@@ -540,15 +573,13 @@ io.on("connection", (socket) => {
     const player = getPlayer(room, socket.id);
     if (!player) return;
 
-    const nextParagraph = getNextParagraphForRoom(room);
-
-    room.players.forEach((p) => {
-      p.paragraph = nextParagraph;
-    });
+    const nextParagraph = getNextParagraphForPlayer(room, socket.id);
+    player.paragraph = nextParagraph;
 
     const payloadOut = { paragraph: nextParagraph };
-    io.to(roomId).emit("new-paragraph", payloadOut);
-    io.to(roomId).emit("room_paragraph", payloadOut);
+    // Send only to the requesting player so opponents continue their own paragraph flow.
+    socket.emit("new-paragraph", payloadOut);
+    socket.emit("room_paragraph", payloadOut);
   });
 
   socket.on("request-paragraph-batch", (payload) => {
