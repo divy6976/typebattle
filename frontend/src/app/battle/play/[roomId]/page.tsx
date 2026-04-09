@@ -513,6 +513,15 @@ export default function BattlePlayPage() {
       if (didNavigateToResultRef.current) return;
       if (typeof window !== "undefined" && roomIdRaw) {
         const socketId = socket?.id ?? "local";
+        const estimatedOpponentCorrectChars = Math.max(
+          0,
+          Math.round((opponentProgress / 100) * TOTAL_TARGET_CHARS),
+        );
+        const myScore =
+          youProgress * 1000 + liveTotalCorrectChars * 10 + youWpm;
+        const opponentScore =
+          opponentProgress * 1000 + estimatedOpponentCorrectChars * 10 + opponentWpm;
+        const estimatedWinnerId = myScore >= opponentScore ? socketId : "opponent";
         window.sessionStorage.setItem(
           `battle_result_${roomIdRaw}`,
           JSON.stringify({
@@ -527,8 +536,18 @@ export default function BattlePlayPage() {
                 progress: youProgress,
               },
             },
-            player2: null,
-            winnerId: null,
+            player2: {
+              id: "opponent",
+              stats: {
+                correctChars: estimatedOpponentCorrectChars,
+                mistakes: 0,
+                totalTypedChars: estimatedOpponentCorrectChars,
+                accuracy: 0,
+                wpm: opponentWpm,
+                progress: opponentProgress,
+              },
+            },
+            winnerId: estimatedWinnerId,
             mySocketId: socketId,
           }),
         );
@@ -571,6 +590,8 @@ export default function BattlePlayPage() {
     liveAccuracy,
     youWpm,
     youProgress,
+    opponentWpm,
+    opponentProgress,
   ]);
 
   // Apply server paragraph (single source of truth)
