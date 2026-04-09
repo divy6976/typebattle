@@ -151,7 +151,7 @@ export default function PlayTypingBox({
         })}
       </div>
       <div className="absolute bottom-6 left-6 right-6 flex items-center justify-between text-[11px] text-slate-300/90 md:bottom-8 md:left-10 md:right-10 md:text-xs">
-        <span>Type word by word. Space = next word.</span>
+        <span className="hidden md:inline">Type word by word. Space = next word.</span>
         <span className="hidden md:inline">No input box - just start typing.</span>
       </div>
     </div>
