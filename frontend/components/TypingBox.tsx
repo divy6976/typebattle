@@ -1,5 +1,14 @@
 "use client";
-import { useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type MutableRefObject,
+} from "react";
 import { getApiBaseUrl } from "../lib/apiBase";
 import PlayTypingBox from "./PlayTypingBox";
 
@@ -123,8 +132,17 @@ export default function TypingBox({
   const wpmSamplesRef = useRef<number[]>([]);
   const didCompleteRef = useRef(false);
   const usedParagraphs = useRef(new Set<string>());
+  const hiddenInputRef = useRef<HTMLInputElement | null>(null);
   const [paragraphError, setParagraphError] = useState<string | null>(null);
   const [isLoadingParagraph, setIsLoadingParagraph] = useState(true);
+
+  const focusHiddenInput = () => {
+    const input = hiddenInputRef.current;
+    if (!input) return;
+    input.focus({ preventScroll: true });
+    const end = input.value.length;
+    input.setSelectionRange(end, end);
+  };
 
   useEffect(() => {
     paragraphRef.current = paragraph;
@@ -210,14 +228,12 @@ export default function TypingBox({
     Math.max(0, Math.round(((timeLimitSeconds - secondsLeft) / timeLimitSeconds) * 100))
   );
 
-  useEffect(() => {
-    const handler = (event: KeyboardEvent) => {
-      if (!hasStarted && event.key.length === 1) {
+  const processKey = useCallback((key: string) => {
+      if (!hasStarted && key.length === 1) {
         setHasStarted(true);
         if (startTimeMs == null) setStartTimeMs(Date.now());
       }
       if (isDone || isTransitioning || words.length === 0) return;
-      const key = event.key;
 
       const commitCurrentWord = (committedWord: string) => {
         const activeWordIndex = currentWordIndexRef.current;
@@ -272,7 +288,6 @@ export default function TypingBox({
       };
 
       if (key === "Backspace") {
-        event.preventDefault();
         setTypedWord((prev) => {
           if (prev.length > 0) return prev.slice(0, -1);
           if (currentWordIndexRef.current === 0) return prev;
@@ -297,10 +312,9 @@ export default function TypingBox({
         return;
       }
 
-      if (key === " " || key === "Spacebar" || key === "Space" || event.code === "Space") {
+      if (key === " " || key === "Spacebar" || key === "Space") {
         const liveTypedWord = typedWordRef.current;
         if (!liveTypedWord) return;
-        event.preventDefault();
         commitCurrentWord(liveTypedWord);
         return;
       }
@@ -317,7 +331,6 @@ export default function TypingBox({
       }
 
       if (key.length === 1) {
-        event.preventDefault();
         const nextTyped = `${typedWordRef.current}${key.toLowerCase()}`;
         typedWordRef.current = nextTyped;
         const activeWordIndex = currentWordIndexRef.current;
@@ -329,22 +342,60 @@ export default function TypingBox({
         }
         setTypedWord(nextTyped);
       }
-    };
-
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
   }, [
-    isDone,
-    words,
     currentWordIndex,
-    typedWord,
-    typedWords,
+    difficulty,
     hasStarted,
+    isDone,
     isTransitioning,
     secondsLeft,
     startTimeMs,
-    difficulty,
+    typedWords,
+    words,
   ]);
+
+  useEffect(() => {
+    focusHiddenInput();
+  }, []);
+
+  useEffect(() => {
+    if (isDone || isTransitioning) return;
+    focusHiddenInput();
+  }, [isDone, isTransitioning, words.length, currentWordIndex]);
+
+  useEffect(() => {
+    const onWindowPointerDown = () => {
+      if (isDone) return;
+      window.setTimeout(() => focusHiddenInput(), 0);
+    };
+    window.addEventListener("pointerdown", onWindowPointerDown);
+    return () => window.removeEventListener("pointerdown", onWindowPointerDown);
+  }, [isDone]);
+
+  const handleHiddenInputKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
+    const key = event.key;
+    if (
+      key === "Backspace" ||
+      key === " " ||
+      key === "Spacebar" ||
+      key === "Space" ||
+      key === "Enter" ||
+      key === "Tab"
+    ) {
+      event.preventDefault();
+      processKey(key);
+      event.currentTarget.value = "";
+    }
+  };
+
+  const handleHiddenInputChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const raw = event.currentTarget.value;
+    if (!raw) return;
+    const chars = Array.from(raw);
+    const lastChar = chars[chars.length - 1];
+    if (lastChar) processKey(lastChar);
+    event.currentTarget.value = "";
+  };
 
   useEffect(() => {
     if (!isDone) {
@@ -387,7 +438,7 @@ export default function TypingBox({
   }, [onComplete, isDone, wpm, accuracy, mistakes, liveTotalTypedChars, liveTotalCorrectChars, timeLimitSeconds]);
 
   return (
-    <div className="w-full max-w-[980px] rounded-lg border border-[#1f2633] bg-[#0b0f14] px-6 py-5">
+    <div className="relative w-full max-w-[980px] rounded-lg border border-[#1f2633] bg-[#0b0f14] px-6 py-5">
       <div className="flex items-start justify-between gap-6">
         <div className="flex items-center gap-3">
           <ClockIcon className="h-6 w-6 text-[#fbbf24]" />
@@ -431,8 +482,24 @@ export default function TypingBox({
           typedWords={typedWords}
           secondsLeft={secondsLeft}
           transitionPhase={transitionPhase}
+          onContainerClick={focusHiddenInput}
         />
       </div>
+      <input
+        ref={hiddenInputRef}
+        type="text"
+        inputMode="text"
+        autoCorrect="off"
+        autoCapitalize="none"
+        spellCheck={false}
+        autoComplete="off"
+        autoFocus
+        aria-label="Typing input"
+        className="absolute left-0 top-0 h-10 w-10 opacity-0"
+        onKeyDown={handleHiddenInputKeyDown}
+        onChange={handleHiddenInputChange}
+        onBlur={() => window.setTimeout(() => focusHiddenInput(), 0)}
+      />
     </div>
   );
 }

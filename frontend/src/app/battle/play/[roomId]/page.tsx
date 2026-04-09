@@ -148,6 +148,7 @@ type TypingTextProps = {
   typedWords: string[];
   secondsLeft: number;
   transitionPhase: "in" | "out";
+  onContainerClick?: () => void;
 };
 
 function TypingText({
@@ -157,6 +158,7 @@ function TypingText({
   typedWords,
   secondsLeft,
   transitionPhase,
+  onContainerClick,
 }: TypingTextProps) {
   const expectedWord = words[currentWordIndex] ?? "";
   const expectedChars = Array.from(expectedWord);
@@ -259,7 +261,10 @@ function TypingText({
   };
 
   return (
-    <div className="relative mx-auto mt-8 w-full max-w-3xl rounded-3xl border border-white/15 bg-white/10 px-6 pt-8 pb-16 font-mono text-lg text-slate-100 shadow-[0_24px_80px_rgba(0,0,0,0.95)] backdrop-blur-2xl h-[260px] overflow-hidden md:px-10 md:pt-12 md:pb-20 md:text-2xl">
+    <div
+      className="relative mx-auto mt-8 w-full max-w-3xl rounded-3xl border border-white/15 bg-white/10 px-6 pt-8 pb-16 font-mono text-lg text-slate-100 shadow-[0_24px_80px_rgba(0,0,0,0.95)] backdrop-blur-2xl h-[260px] overflow-hidden md:px-10 md:pt-12 md:pb-20 md:text-2xl"
+      onClick={onContainerClick}
+    >
       <div className="pointer-events-none absolute inset-0 rounded-3xl bg-[radial-gradient(circle_at_10%_0%,rgba(250,204,21,0.12),transparent_45%),radial-gradient(circle_at_90%_90%,rgba(168,85,247,0.18),transparent_55%)]" />
       <div className="pointer-events-none absolute inset-6 rounded-2xl border border-white/5" />
 
@@ -362,6 +367,10 @@ export default function BattlePlayPage() {
   const [gameStarted, setGameStarted] = useState(serverStartAtMs == null);
 
   const socketRef = useRef<Socket | null>(null);
+  const hiddenInputRef = useRef<HTMLInputElement | null>(null);
+  const currentWordIndexRef = useRef(0);
+  const typedWordRef = useRef("");
+  const typedWordsRef = useRef<string[]>([]);
   const didNavigateToResultRef = useRef(false);
   const didRequestFinalizeRef = useRef(false);
   const finalizeFallbackTimerRef = useRef<number | null>(null);
@@ -382,6 +391,14 @@ export default function BattlePlayPage() {
     totalWordsTyped: 0,
     startTime: null,
   });
+
+  const focusHiddenInput = () => {
+    const input = hiddenInputRef.current;
+    if (!input) return;
+    input.focus({ preventScroll: true });
+    const end = input.value.length;
+    input.setSelectionRange(end, end);
+  };
 
   const currentWordLiveStats = useMemo(() => {
     return getWordStats(words[currentWordIndex] ?? "", typedWord);
@@ -673,25 +690,36 @@ export default function BattlePlayPage() {
   }, [gameStarted, startTimeMs, serverEndAtMs, initialDurationSec]);
 
   useEffect(() => {
-    const handler = (event: KeyboardEvent) => {
+    currentWordIndexRef.current = currentWordIndex;
+  }, [currentWordIndex]);
+
+  useEffect(() => {
+    typedWordRef.current = typedWord;
+  }, [typedWord]);
+
+  useEffect(() => {
+    typedWordsRef.current = typedWords;
+  }, [typedWords]);
+
+  const processKey = (key: string) => {
       if (!gameStarted) return;
       if (isGameOver) return;
       if (isTransitioning) return;
       if (words.length === 0) return;
 
-      const key = event.key;
       const commitCurrentWord = (committedWord: string) => {
-        const expected = words[currentWordIndex] ?? "";
+        const activeWordIndex = currentWordIndexRef.current;
+        const expected = words[activeWordIndex] ?? "";
         if (!expected) return;
         if (committedWord.length < expected.length) return;
 
-        const isLastWord = currentWordIndex >= words.length - 1;
-        const nextWordIndex = currentWordIndex + 1;
+        const isLastWord = activeWordIndex >= words.length - 1;
+        const nextWordIndex = activeWordIndex + 1;
 
         // Commit current word typed characters for character-level validation in renderer
         setTypedWords((prev) => {
           const next = [...prev];
-          next[currentWordIndex] = committedWord;
+          next[activeWordIndex] = committedWord;
           return next;
         });
         const committedStats = getWordStats(expected, committedWord);
@@ -723,13 +751,17 @@ export default function BattlePlayPage() {
         }
 
         // Not last word: move forward
-        setCurrentWordIndex((_) => (nextWordIndex < words.length ? nextWordIndex : currentWordIndex));
+        setCurrentWordIndex((_) => {
+          const next = nextWordIndex < words.length ? nextWordIndex : activeWordIndex;
+          currentWordIndexRef.current = next;
+          return next;
+        });
+        typedWordRef.current = "";
         setTypedWord("");
       };
 
       // Backspace: edit current word, or navigate to previous word when empty
       if (key === "Backspace") {
-        event.preventDefault();
         setTypedWord((prev) => {
           // If there is content in the current word, just delete last char
           if (prev.length > 0) {
@@ -737,16 +769,18 @@ export default function BattlePlayPage() {
           }
 
           // If we're at the first word already, nothing to navigate to
-          if (currentWordIndex === 0) {
+          if (currentWordIndexRef.current === 0) {
             return prev;
           }
 
           // Move back to previous word and load its typed content
-          const previousIndex = currentWordIndex - 1;
-          const previousTyped = typedWords[previousIndex] ?? "";
+          const previousIndex = currentWordIndexRef.current - 1;
+          const previousTyped = typedWordsRef.current[previousIndex] ?? "";
           const previousExpected = words[previousIndex] ?? "";
           const previousStats = getWordStats(previousExpected, previousTyped);
 
+          currentWordIndexRef.current = previousIndex;
+          typedWordRef.current = previousTyped;
           setCurrentWordIndex(previousIndex);
           setTypedWords((prev) => {
             const next = [...prev];
@@ -767,10 +801,10 @@ export default function BattlePlayPage() {
       }
 
       // Space commits the current word and moves to the next word
-      if (key === " ") {
-        if (!typedWord) return;
-        event.preventDefault();
-        commitCurrentWord(typedWord);
+      if (key === " " || key === "Spacebar" || key === "Space") {
+        const liveTypedWord = typedWordRef.current;
+        if (!liveTypedWord) return;
+        commitCurrentWord(liveTypedWord);
         return;
       }
 
@@ -780,16 +814,17 @@ export default function BattlePlayPage() {
 
       // Accept normal single character typing (ASCII-friendly; we keep whatever the user types).
       if (key.length === 1) {
-        event.preventDefault();
         if (startTimeMs == null) {
           const now = Date.now();
           setStartTimeMs(now);
           setGameStats((prev) => (prev.startTime == null ? { ...prev, startTime: now } : prev));
           setGameStarted(true);
         }
-        const nextTyped = `${typedWord}${key.toLowerCase()}`;
-        const expected = words[currentWordIndex] ?? "";
-        const isLastWord = currentWordIndex >= words.length - 1;
+        const nextTyped = `${typedWordRef.current}${key.toLowerCase()}`;
+        typedWordRef.current = nextTyped;
+        const activeWordIndex = currentWordIndexRef.current;
+        const expected = words[activeWordIndex] ?? "";
+        const isLastWord = activeWordIndex >= words.length - 1;
         if (isLastWord && expected && nextTyped.length >= expected.length) {
           commitCurrentWord(nextTyped);
           return;
@@ -798,20 +833,52 @@ export default function BattlePlayPage() {
         return;
       }
 
+  };
+
+  const handleHiddenInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    const key = event.key;
+    if (
+      key === "Backspace" ||
+      key === " " ||
+      key === "Spacebar" ||
+      key === "Space" ||
+      key === "Enter" ||
+      key === "Tab"
+    ) {
+      event.preventDefault();
+      processKey(key);
+      event.currentTarget.value = "";
+    }
+  };
+
+  const handleHiddenInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = event.currentTarget.value;
+    if (!raw) return;
+    const chars = Array.from(raw);
+    const lastChar = chars[chars.length - 1];
+    if (lastChar) processKey(lastChar);
+    event.currentTarget.value = "";
+  };
+
+  useEffect(() => {
+    focusHiddenInput();
+  }, []);
+
+  useEffect(() => {
+    if (!gameStarted || isGameOver) return;
+    focusHiddenInput();
+  }, [gameStarted, isGameOver, isTransitioning, words.length, currentWordIndex]);
+
+  useEffect(() => {
+    const onWindowPointerDown = () => {
+      if (isGameOver) return;
+      window.setTimeout(() => focusHiddenInput(), 0);
     };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
+    window.addEventListener("pointerdown", onWindowPointerDown);
+    return () => window.removeEventListener("pointerdown", onWindowPointerDown);
   }, [
     isGameOver,
-    typedWord,
-    words,
-    currentWordIndex,
-    startTimeMs,
-    typedWords,
     gameStarted,
-    isTransitioning,
-    roomIdRaw,
-    secondsLeft,
   ]);
 
   return (
@@ -845,6 +912,22 @@ export default function BattlePlayPage() {
             typedWords={typedWords}
             secondsLeft={secondsLeft}
             transitionPhase={transitionPhase}
+            onContainerClick={focusHiddenInput}
+          />
+          <input
+            ref={hiddenInputRef}
+            type="text"
+            inputMode="text"
+            autoCorrect="off"
+            autoCapitalize="none"
+            spellCheck={false}
+            autoComplete="off"
+            autoFocus
+            aria-label="Battle typing input"
+            className="absolute left-2 top-2 h-10 w-10 opacity-0"
+            onKeyDown={handleHiddenInputKeyDown}
+            onChange={handleHiddenInputChange}
+            onBlur={() => window.setTimeout(() => focusHiddenInput(), 0)}
           />
         </section>
 

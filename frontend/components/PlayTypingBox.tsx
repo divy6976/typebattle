@@ -9,6 +9,7 @@ type PlayTypingBoxProps = {
   typedWords: string[];
   secondsLeft: number;
   transitionPhase: "in" | "out";
+  onContainerClick?: () => void;
 };
 
 export default function PlayTypingBox({
@@ -18,6 +19,7 @@ export default function PlayTypingBox({
   typedWords,
   secondsLeft,
   transitionPhase,
+  onContainerClick,
 }: PlayTypingBoxProps) {
   const expectedWord = words[currentWordIndex] ?? "";
   const expectedChars = Array.from(expectedWord);
@@ -107,7 +109,10 @@ export default function PlayTypingBox({
   };
 
   return (
-    <div className="relative mx-auto w-full max-w-3xl rounded-3xl border border-white/15 bg-white/10 px-6 pt-8 pb-16 font-mono text-lg text-slate-100 shadow-[0_24px_80px_rgba(0,0,0,0.95)] backdrop-blur-2xl h-[260px] overflow-hidden md:px-10 md:pt-12 md:pb-20 md:text-2xl">
+    <div
+      className="relative mx-auto w-full max-w-3xl rounded-3xl border border-white/15 bg-white/10 px-6 pt-8 pb-16 font-mono text-lg text-slate-100 shadow-[0_24px_80px_rgba(0,0,0,0.95)] backdrop-blur-2xl h-[260px] overflow-hidden md:px-10 md:pt-12 md:pb-20 md:text-2xl"
+      onClick={onContainerClick}
+    >
       <div className="pointer-events-none absolute inset-0 rounded-3xl bg-[radial-gradient(circle_at_10%_0%,rgba(250,204,21,0.12),transparent_45%),radial-gradient(circle_at_90%_90%,rgba(168,85,247,0.18),transparent_55%)]" />
       <div className="pointer-events-none absolute inset-6 rounded-2xl border border-white/5" />
       <div
