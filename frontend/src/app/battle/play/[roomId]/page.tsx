@@ -4,8 +4,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { io, type Socket } from "socket.io-client";
+import { getApiBaseUrl } from "../../../../../lib/apiBase";
 
-const SOCKET_URL = "http://localhost:5000";
+const SOCKET_URL = getApiBaseUrl();
 const TOTAL_TARGET_CHARS = 1000;
 const DEFAULT_GAME_DURATION_SEC = 60;
 
@@ -353,6 +354,7 @@ export default function BattlePlayPage() {
   const [gameStarted, setGameStarted] = useState(serverStartAtMs == null);
 
   const socketRef = useRef<Socket | null>(null);
+  const didNavigateToResultRef = useRef(false);
   const [opponentWpm, setOpponentWpm] = useState(0);
   const [opponentProgress, setOpponentProgress] = useState(0);
 
@@ -460,7 +462,10 @@ export default function BattlePlayPage() {
         );
       }
 
-      router.push(`/battle/result/${roomIdRaw}`);
+      if (!didNavigateToResultRef.current) {
+        didNavigateToResultRef.current = true;
+        router.push(`/battle/result/${roomIdRaw}`);
+      }
     });
 
     return () => {
@@ -468,6 +473,51 @@ export default function BattlePlayPage() {
       socketRef.current = null;
     };
   }, [roomIdRaw, router]);
+
+  // Fallback: if timer reaches zero but game_over event is delayed/missed, still open result page.
+  useEffect(() => {
+    if (!gameStarted) return;
+    if (secondsLeft > 0) return;
+    if (didNavigateToResultRef.current) return;
+
+    const socketId = socketRef.current?.id ?? "local";
+    const myStats: PlayerFinalStats = {
+      correctChars: liveTotalCorrectChars,
+      mistakes: liveMistakes,
+      totalTypedChars: liveTotalTypedChars,
+      accuracy: liveAccuracy,
+      wpm: youWpm,
+      progress: youProgress,
+    };
+
+    if (typeof window !== "undefined" && roomIdRaw) {
+      window.sessionStorage.setItem(
+        `battle_result_${roomIdRaw}`,
+        JSON.stringify({
+          player1: { id: socketId, stats: myStats },
+          player2: null,
+          winnerId: socketId,
+          youWin: true,
+          mySocketId: socketId,
+        }),
+      );
+    }
+
+    setIsGameOver(true);
+    didNavigateToResultRef.current = true;
+    router.push(`/battle/result/${roomIdRaw}`);
+  }, [
+    gameStarted,
+    secondsLeft,
+    roomIdRaw,
+    router,
+    liveTotalCorrectChars,
+    liveMistakes,
+    liveTotalTypedChars,
+    liveAccuracy,
+    youWpm,
+    youProgress,
+  ]);
 
   // Apply server paragraph (single source of truth)
   useEffect(() => {
