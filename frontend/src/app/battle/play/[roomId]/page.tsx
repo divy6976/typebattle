@@ -364,6 +364,7 @@ export default function BattlePlayPage() {
   const socketRef = useRef<Socket | null>(null);
   const didNavigateToResultRef = useRef(false);
   const didRequestFinalizeRef = useRef(false);
+  const finalizeFallbackTimerRef = useRef<number | null>(null);
   const [opponentWpm, setOpponentWpm] = useState(0);
   const [opponentProgress, setOpponentProgress] = useState(0);
 
@@ -465,6 +466,10 @@ export default function BattlePlayPage() {
     socket.on("game_over", (payload: GameOverPayload) => {
       if (!payload || typeof payload !== "object") return;
       setIsGameOver(true);
+      if (finalizeFallbackTimerRef.current != null) {
+        window.clearTimeout(finalizeFallbackTimerRef.current);
+        finalizeFallbackTimerRef.current = null;
+      }
 
       const youWin = payload.winnerId === socket.id;
       if (typeof window !== "undefined") {
@@ -485,6 +490,10 @@ export default function BattlePlayPage() {
     });
 
     return () => {
+      if (finalizeFallbackTimerRef.current != null) {
+        window.clearTimeout(finalizeFallbackTimerRef.current);
+        finalizeFallbackTimerRef.current = null;
+      }
       socket.disconnect();
       socketRef.current = null;
     };
@@ -500,6 +509,34 @@ export default function BattlePlayPage() {
     setIsGameOver(true);
 
     const socket = socketRef.current;
+    const navigateWithFallbackResult = () => {
+      if (didNavigateToResultRef.current) return;
+      if (typeof window !== "undefined" && roomIdRaw) {
+        const socketId = socket?.id ?? "local";
+        window.sessionStorage.setItem(
+          `battle_result_${roomIdRaw}`,
+          JSON.stringify({
+            player1: {
+              id: socketId,
+              stats: {
+                correctChars: liveTotalCorrectChars,
+                mistakes: liveMistakes,
+                totalTypedChars: liveTotalTypedChars,
+                accuracy: liveAccuracy,
+                wpm: youWpm,
+                progress: youProgress,
+              },
+            },
+            player2: null,
+            winnerId: null,
+            mySocketId: socketId,
+          }),
+        );
+      }
+      didNavigateToResultRef.current = true;
+      router.push(`/battle/result/${roomIdRaw}`);
+    };
+
     if (socket?.connected) {
       // Push one final progress snapshot before forcing finalize.
       socket.emit("progress-update", {
@@ -514,34 +551,15 @@ export default function BattlePlayPage() {
         },
       });
       socket.emit("finalize-game", { roomId: roomIdRaw });
+      // If backend game_over is missed for any reason, do not leave user stuck on 00:00.
+      finalizeFallbackTimerRef.current = window.setTimeout(() => {
+        navigateWithFallbackResult();
+      }, 2500);
       return;
     }
 
     // Last-resort offline fallback: navigate without forcing local winner.
-    if (typeof window !== "undefined" && roomIdRaw) {
-      const socketId = socket?.id ?? "local";
-      window.sessionStorage.setItem(
-        `battle_result_${roomIdRaw}`,
-        JSON.stringify({
-          player1: {
-            id: socketId,
-            stats: {
-              correctChars: liveTotalCorrectChars,
-              mistakes: liveMistakes,
-              totalTypedChars: liveTotalTypedChars,
-              accuracy: liveAccuracy,
-              wpm: youWpm,
-              progress: youProgress,
-            },
-          },
-          player2: null,
-          winnerId: null,
-          mySocketId: socketId,
-        }),
-      );
-    }
-    didNavigateToResultRef.current = true;
-    router.push(`/battle/result/${roomIdRaw}`);
+    navigateWithFallbackResult();
   }, [
     gameStarted,
     secondsLeft,
