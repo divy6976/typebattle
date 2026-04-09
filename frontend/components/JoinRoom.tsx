@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useSearchParams } from "next/navigation";
 
 type JoinRoomProps = {
   onJoinRoom?: (roomCode: string) => void;
@@ -45,15 +44,17 @@ function ArrowRightIcon({ className }: { className?: string }) {
 
 export default function JoinRoom({ onJoinRoom }: JoinRoomProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const incomingRoomCode = searchParams.get("roomCode") ?? "";
-  const incomingJoinError = searchParams.get("joinError") ?? "";
-  const [roomCode, setRoomCode] = useState(incomingRoomCode.toUpperCase());
+  const [roomCode, setRoomCode] = useState("");
+  const [incomingJoinError, setIncomingJoinError] = useState("");
 
   useEffect(() => {
-    if (!incomingRoomCode) return;
-    setRoomCode(incomingRoomCode.toUpperCase());
-  }, [incomingRoomCode]);
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const incomingRoomCode = params.get("roomCode") ?? "";
+    const incomingError = params.get("joinError") ?? "";
+    if (incomingRoomCode) setRoomCode(incomingRoomCode.toUpperCase());
+    setIncomingJoinError(incomingError);
+  }, []);
 
   const handleJoin = () => {
     const code = roomCode.trim().replace(/\s+/g, "").toUpperCase();
