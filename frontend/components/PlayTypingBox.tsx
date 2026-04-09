@@ -1,5 +1,7 @@
 "use client";
 
+import type { ReactNode } from "react";
+
 type PlayTypingBoxProps = {
   words: string[];
   currentWordIndex: number;
@@ -26,7 +28,7 @@ export default function PlayTypingBox({
   const normalize = (s: string) => s.toLowerCase();
 
   const renderExpectedWordTypedChars = () => {
-    const nodes: JSX.Element[] = [];
+    const nodes: ReactNode[] = [];
 
     for (let i = 0; i <= maxLen; i += 1) {
       if (i === typedChars.length && caretVisible) {
@@ -70,7 +72,7 @@ export default function PlayTypingBox({
   const renderCommittedWordChars = (word: string, committedTypedWord: string) => {
     const expected = Array.from(word);
     const typed = Array.from(committedTypedWord);
-    const nodes: JSX.Element[] = [];
+    const nodes: ReactNode[] = [];
     const max = Math.max(expected.length, typed.length);
 
     for (let i = 0; i < max; i += 1) {
