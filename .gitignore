@@ -1,6 +1,8 @@
 *
 !.gitignore
 !README.md
-!typebattle/
-!typebattle/**
+!backend/
+!backend/**
+!frontend/
+!frontend/**
 
