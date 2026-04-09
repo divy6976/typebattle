@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 
 type JoinRoomProps = {
   onJoinRoom?: (roomCode: string) => void;
@@ -44,7 +45,15 @@ function ArrowRightIcon({ className }: { className?: string }) {
 
 export default function JoinRoom({ onJoinRoom }: JoinRoomProps) {
   const router = useRouter();
-  const [roomCode, setRoomCode] = useState("");
+  const searchParams = useSearchParams();
+  const incomingRoomCode = searchParams.get("roomCode") ?? "";
+  const incomingJoinError = searchParams.get("joinError") ?? "";
+  const [roomCode, setRoomCode] = useState(incomingRoomCode.toUpperCase());
+
+  useEffect(() => {
+    if (!incomingRoomCode) return;
+    setRoomCode(incomingRoomCode.toUpperCase());
+  }, [incomingRoomCode]);
 
   const handleJoin = () => {
     const code = roomCode.trim().replace(/\s+/g, "").toUpperCase();
@@ -61,6 +70,11 @@ export default function JoinRoom({ onJoinRoom }: JoinRoomProps) {
           Join Room
         </h2>
         <p className="mt-1 text-[13px] font-medium text-[#9ea9bc]">Enter a room code to join</p>
+        {incomingJoinError ? (
+          <p className="mt-1 text-[13px] font-bold text-red-400">
+            {incomingJoinError}
+          </p>
+        ) : null}
 
         <div className="mt-2">
           <input

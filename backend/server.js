@@ -465,6 +465,16 @@ io.on("connection", (socket) => {
     const roomId = parsed.roomId;
     if (!roomId) return;
 
+    const roomExists = !!rooms[roomId];
+    const canCreateRoom = !!parsed.settings;
+    if (!roomExists && !canCreateRoom) {
+      socket.emit("join_room_error", {
+        code: "ROOM_NOT_FOUND",
+        message: "Room with this code does not exist. Create a room.",
+      });
+      return;
+    }
+
     socket.join(roomId);
 
     if (!rooms[roomId]) {

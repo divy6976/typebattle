@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { io, type Socket } from "socket.io-client";
 import { getApiBaseUrl } from "../lib/apiBase";
 import BattleStartCountdown from "./BattleStartCountdown";
@@ -52,6 +53,7 @@ type WaitingSectionProps = {
 export default function WaitingSection({ compact = false }: WaitingSectionProps) {
   const params = useParams();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const roomId = typeof params?.roomId === "string" ? params.roomId : "";
   const difficultyParam = searchParams.get("difficulty");
   const timeLimitParam = Number(searchParams.get("timeLimit"));
@@ -95,6 +97,18 @@ export default function WaitingSection({ compact = false }: WaitingSectionProps)
       setMySocketId(socket.id ?? null);
     });
 
+    socket.on("join_room_error", (payload: { code?: string; message?: string }) => {
+      if (payload?.code !== "ROOM_NOT_FOUND") return;
+      const message =
+        typeof payload?.message === "string" && payload.message.trim()
+          ? payload.message.trim()
+          : "Room with this code does not exist. Create a room.";
+      const code = roomId.toUpperCase();
+      router.replace(
+        `/battle?joinError=${encodeURIComponent(message)}&roomCode=${encodeURIComponent(code)}`
+      );
+    });
+
     socket.on("start_game", (payload: { startAtMs?: number; endAtMs?: number; difficulty?: Difficulty; timeLimitSec?: TimeLimitSec }) => {
       console.log("Game Starting");
       if (typeof payload?.startAtMs === "number" && Number.isFinite(payload.startAtMs)) {
@@ -126,7 +140,7 @@ export default function WaitingSection({ compact = false }: WaitingSectionProps)
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [roomId, roomSettings]);
+  }, [roomId, roomSettings, router]);
 
   const { youReady, opponentReady, opponentJoined } = useMemo(() => {
     if (!mySocketId) {
